@@ -9,6 +9,8 @@ from PIL import Image, ImageQt, ImageOps
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+import torch
+import torch.nn as nn
 
 from outputUI import Ui_MainWindow
 from PaintBoard import PaintBoard
@@ -52,6 +54,27 @@ for i in range (len(X_train)):
     X2_train[i] = image
 
 print(X2_train[0].reshape(8,8))
+
+# 定义 CNN 模型
+class CNNModel(nn.Module):
+    def __init__(self):
+        super(CNNModel, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=2)
+        self.fc1 = nn.Linear(64 * 2 * 2, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 1, 8, 8)  # 将数据重塑为图像格式
+        x = self.pool(nn.functional.relu(self.conv1(x)))
+        x = self.pool(nn.functional.relu(self.conv2(x)))
+        # print(x.shape)
+        x = x.view(-1, 64 * 2 * 2)
+        # print(x.shape)
+        x = torch.sigmoid(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -146,7 +169,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif text == '5：随机森林':
              self.model = 5
              self.clearDataArea()
-
+             
+        elif text == '6：CNN':
+             self.model = 6
+             self.clearDataArea()
+        
     # 数据清除
     def pbtClear_Callback(self):
         self.clearDataArea()
@@ -199,9 +226,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif (self.model == 4):
             __result = self.polysvm(img_array)
 
-        else:
+        elif (self.model == 5):
             __result = self.RandomForest(img_array)
 
+        else :
+            __result = self.CNN(img_array)
         print (__result)
 
         self.result[0] = __result  # 预测的数字
@@ -290,6 +319,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         return y_pred[0]
 
+    def CNN(self, Image):
+        # 1. 加载模型
+        model = CNNModel()  # 创建模型实例
+        model.load_state_dict(torch.load('params.pth'))  # 加载模型参数
+
+        image = self.fit_transform(Image)
+        image_tensor = torch.from_numpy(image).float()  # 转换为 PyTorch 的 float 张量
+
+        # 添加 batch 维度
+        image_tensor = image_tensor.unsqueeze(0)  # 在第 0 维增加一个维度作为 batch
+
+        model.eval()  # 设置模型为评估模式
+        with torch.no_grad():
+            output = model(image_tensor)
+
+        # 获取预测结果
+        _, predicted = torch.max(output, 1)
+        prediction = predicted.item()  # 获取预测的类别
+
+        # 这里的 prediction 即为模型对图片的预测结果（0 到 9 的数字类别）
+        print(f"The predicted class for the image is: {prediction}")
+        return prediction
+
+    #标准化
+    def fit_transform(self, image_array):
+        mean = np.mean(image_array)
+        std = np.std(image_array)
+
+        # 对图片进行标准化处理
+        normalized_image = (image_array - mean) / std
+        return normalized_image
+
     #归一化
     def normalize_image(self, image_array):
         # 将图像数组缩放到 [0, 1] 范围
@@ -302,7 +363,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        defaultPath = r"D:\data_mining\课设\image"  # 设置默认路径
+        defaultPath = r"D:\pytorch-pro\课设\image"  # 设置默认路径
         fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", defaultPath,
                                                   "Images (*.png *.jpg *.bmp)", options=options)
         if fileName:

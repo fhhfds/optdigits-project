@@ -28,6 +28,7 @@ class Ui_MainWindow(object):
         self.cbBox_Mode1.addItem("")
         self.cbBox_Mode1.addItem("")
         self.cbBox_Mode1.addItem("")
+        self.cbBox_Mode1.addItem("")
 
         self.label = QtWidgets.QLabel(MainWindow)
         self.label.setGeometry(QtCore.QRect(40, 225, 80, 20))
@@ -103,6 +104,7 @@ class Ui_MainWindow(object):
         self.cbBox_Mode1.setItemText(2, _translate("MainWindow", "3：SVM(高斯核)"))
         self.cbBox_Mode1.setItemText(3, _translate("MainWindow", "4：SVM(多项式核)"))
         self.cbBox_Mode1.setItemText(4, _translate("MainWindow", "5：随机森林"))
+        self.cbBox_Mode1.setItemText(5, _translate("MainWindow", "6：CNN"))
 
         self.label.setText(_translate("MainWindow", "模式选择"))
         self.pbtClear.setText(_translate("MainWindow", "清除数据"))
